@@ -18,10 +18,13 @@
 #define GREEN 0x0000FF00
 #define BLUE 0x000000FF
 
-Adafruit_CPlay_NeoPixel strip = Adafruit_CPlay_NeoPixel(10, CPLAY_NEOPIXELPIN, NEO_GRB + NEO_KHZ800);
+#define HOLD_DELAY_VALID_HIT 250
+#define HOLD_DELAY_TEAM_SWITCH 500
+#define ANIMATION_DELAY_TEAM_SWITCH 180
+#define ANIMATION_DELAY_HIT_POINT 200
+#define ANIMATION_DELAY_NO_HIT_POINT 1000
 
-int ANIMATION_DELAY = 200;
-int HOLD_DELAY = 350;
+Adafruit_CPlay_NeoPixel strip = Adafruit_CPlay_NeoPixel(10, CPLAY_NEOPIXELPIN, NEO_GRB + NEO_KHZ800);
 
 // Purple Team = 0
 // Red Team = 1
@@ -59,34 +62,30 @@ bool validHit() {
 }
 
 void validHitResponse() {
-  ANIMATION_DELAY = 0; //ms
-  HOLD_DELAY = 250; //ms
   --hitPoint;
   switch (ownerTeam) {
     case 0:
       Serial.print("VALID HIT PURPLE 0x");
       Serial.println(myDecoder.value, HEX);
-      setLEDColor(PURPLE);
+      setLEDColor(PURPLE, 0);
       break;
     case 1:
       Serial.print("VALID HIT BLUE 0x");
       Serial.println(myDecoder.value, HEX);
-      setLEDColor(BLUE);
+      setLEDColor(BLUE, 0);
       break;
     case 2:
       Serial.print("VALID HIT RED 0x");
       Serial.println(myDecoder.value, HEX);
-      setLEDColor(RED);
+      setLEDColor(RED, 0);
       break;
   }
-  delay(HOLD_DELAY);
+  delay(HOLD_DELAY_VALID_HIT);
   setLEDNone();
 }
 
 // Cycle ownerTeam variable between teams and show a boot-up animation to indicate ownerTeam color when Right Button is pressed.
 void teamSwitchButton() {
-  ANIMATION_DELAY = 180;
-  HOLD_DELAY = 500;
   setLEDNone();
   if (ownerTeam < 2) {
     ++ownerTeam;
@@ -96,16 +95,16 @@ void teamSwitchButton() {
   }
   switch (ownerTeam) {
     case 0:
-      setLEDColor(PURPLE);
+      setLEDColor(PURPLE, ANIMATION_DELAY_TEAM_SWITCH);
       break;
     case 1:
-      setLEDColor(RED);
+      setLEDColor(RED, ANIMATION_DELAY_TEAM_SWITCH);
       break;
     case 2:
-      setLEDColor(BLUE);
+      setLEDColor(BLUE, ANIMATION_DELAY_TEAM_SWITCH);
       break;
   }
-  delay(HOLD_DELAY);
+  delay(HOLD_DELAY_TEAM_SWITCH);
   hitPointLEDGreen();
 }
 
@@ -128,7 +127,7 @@ void resetButton() {
 }
 
 // set all NeoPixels to the given color
-void setLEDColor(uint32_t color)
+void setLEDColor(uint32_t color, int animation_delay)
 {
   uint8_t r = (color >> 16) & 0xFF;
   uint8_t g = (color >> 8) & 0xFF;
@@ -137,7 +136,7 @@ void setLEDColor(uint32_t color)
   for (int i=0; i<strip.numPixels(); i++) {
     strip.setPixelColor(i, r, g, b);
     strip.show();
-    delay(ANIMATION_DELAY);
+    delay(animation_delay);
   }
 }
 
@@ -146,7 +145,7 @@ void hitPointLEDGreen() {
   for (int i=0; i<hitPoint; i++) {
     strip.setPixelColor(i, 0x00, 0xFF, 0x00);
     strip.show();
-    delay(ANIMATION_DELAY);
+    delay(ANIMATION_DELAY_HIT_POINT);
   }
 }
 
@@ -156,12 +155,11 @@ void setLEDNone() {
 }
 
 void noHitPoint() {
-  ANIMATION_DELAY = 1000;
 //  while (hitPoint == 0) {
     for (int i=0; i<strip.numPixels(); i++) {
       strip.setPixelColor(i, 0xFF, 0xFF, 0xFF);
       strip.show();
-      delay(ANIMATION_DELAY);
+      delay(ANIMATION_DELAY_NO_HIT_POINT);
     }
     setLEDNone();
     if (CircuitPlayground.rightButton()) {
