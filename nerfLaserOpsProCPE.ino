@@ -13,6 +13,11 @@
 #define deltaBurstRed 0xE4469982
 #define deltaBurstBlue 0x9BE00484
 
+#define PURPLE 0x00FF00FF
+#define RED 0x00FF0000
+#define GREEN 0x0000FF00
+#define BLUE 0x000000FF
+
 Adafruit_CPlay_NeoPixel strip = Adafruit_CPlay_NeoPixel(10, CPLAY_NEOPIXELPIN, NEO_GRB + NEO_KHZ800);
 
 int ANIMATION_DELAY = 200;
@@ -61,17 +66,17 @@ void validHitResponse() {
     case 0:
       Serial.print("VALID HIT PURPLE 0x");
       Serial.println(myDecoder.value, HEX);
-      setLEDPurple();
+      setLEDColor(PURPLE);
       break;
     case 1:
       Serial.print("VALID HIT BLUE 0x");
       Serial.println(myDecoder.value, HEX);
-      setLEDBlue();
+      setLEDColor(BLUE);
       break;
     case 2:
       Serial.print("VALID HIT RED 0x");
       Serial.println(myDecoder.value, HEX);
-      setLEDRed();
+      setLEDColor(RED);
       break;
   }
   delay(HOLD_DELAY);
@@ -91,13 +96,13 @@ void teamSwitchButton() {
   }
   switch (ownerTeam) {
     case 0:
-      setLEDPurple();
+      setLEDColor(PURPLE);
       break;
     case 1:
-      setLEDRed();
+      setLEDColor(RED);
       break;
     case 2:
-      setLEDBlue();
+      setLEDColor(BLUE);
       break;
   }
   delay(HOLD_DELAY);
@@ -110,48 +115,27 @@ void resetButton() {
   setLEDNone();
   switch (ownerTeam) {
     case 0:
-      setLEDPurple();
+      setLEDColor(PURPLE);
       break;
     case 1:
-      setLEDRed(); 
+      setLEDColor(RED);
       break;
     case 2:
-      setLEDBlue();
+      setLEDColor(BLUE);
       break;
   }
   hitPointLEDGreen();
 }
 
-// Set All NeoPixels to Purple
-void setLEDPurple () {
-  for (int i=0; i<strip.numPixels(); i++) {
-    strip.setPixelColor(i, 0xFF, 0x00, 0xFF);
-    strip.show();
-    delay(ANIMATION_DELAY);
-  }
-}
+// set all NeoPixels to the given color
+void setLEDColor(uint32_t color)
+{
+  uint8_t r = (color >> 16) & 0xFF;
+  uint8_t g = (color >> 8) & 0xFF;
+  uint8_t b = color & 0xFF;
 
-// Set All NeoPixels to Red
-void setLEDRed () {
   for (int i=0; i<strip.numPixels(); i++) {
-    strip.setPixelColor(i, 0xFF, 0x00, 0x00);
-    strip.show();
-    delay(ANIMATION_DELAY);
-  }
-}
-
-// Set All NeoPixels to Blue
-void setLEDBlue() {
-  for (int i=0; i<strip.numPixels(); i++) {
-    strip.setPixelColor(i, 0x00, 0x00, 0xFF);
-    strip.show();
-    delay(ANIMATION_DELAY);
-  }
-}
-
-void setLEDGreen() {
-  for (int i=0; i<strip.numPixels(); i++) {
-    strip.setPixelColor(i, 0x00, 0xFF, 0x00);
+    strip.setPixelColor(i, r, g, b);
     strip.show();
     delay(ANIMATION_DELAY);
   }
@@ -196,8 +180,8 @@ void setup() {
   strip.setBrightness(42);
   strip.clear();
   strip.show();
-  setLEDPurple();
-  setLEDGreen();
+  setLEDColor(PURPLE);
+  setLEDColor(GREEN);
 }
 
 void loop() {
