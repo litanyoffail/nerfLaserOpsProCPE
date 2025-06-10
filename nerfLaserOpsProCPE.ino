@@ -13,112 +13,113 @@
 #define DB_RED 0xE4469982
 #define DB_BLUE 0x9BE00484
 
-#define PURPLE 0x00FF00FF
-#define RED 0x00FF0000
-#define GREEN 0x0000FF00
-#define BLUE 0x000000FF
+#define PURPLE 0x000A000A
+#define RED 0x000A0000
+#define GREEN 0x00000A00
+#define BLUE 0x0000000A
 
 const char* teamName[] = {"PURPLE", "RED", "BLUE"};
 const uint32_t teamColor[] = {PURPLE, RED, BLUE};
-
-#define HOLD_DELAY_VALID_HIT 250
-#define HOLD_DELAY_TEAM_SWITCH 500
-#define ANIMATION_DELAY_SETUP 180
-#define ANIMATION_DELAY_TEAM_SWITCH 180
-#define ANIMATION_DELAY_RESET 200
-#define ANIMATION_DELAY_HIT_POINT 200
-#define ANIMATION_DELAY_NO_HIT_POINT 1000
 
 Adafruit_CPlay_NeoPixel strip = Adafruit_CPlay_NeoPixel(10, CPLAY_NEOPIXELPIN, NEO_GRB + NEO_KHZ800);
 
 // Purple Team = 0
 // Red Team = 1
 // Blue Team = 2
-int ownerTeam = 0;
+int teamOwner = 0;
+int teamEnemy = 0;
 
-// Hit Points and Damage
-#define HIT_POINT_MAX 10
-int hitPoint = HIT_POINT_MAX;
+// Hit Point Config
+#define HIT_POINT_BASE 10
+int HIT_POINT_MULTIPLIER = 1;
+int hitPoint = HIT_POINT_BASE * HIT_POINT_MULTIPLIER;
 
 // Hits will only be valid from opposing team if Red or Blue, or any Purple
 // Prevents Red/Blue from affecting Purple and vice versa to copy stock behaviour.
 // Maybe there is a game mode that can be tied to modyfing this behaviour somehow?
 bool validHit() {
-  const uint32_t alphaPoint[] = {AP_PURPLE, AP_BLUE, AP_RED};
-  const uint32_t deltaBurst[] = {DB_PURPLE, DB_BLUE, AP_RED};
+  myDecoder.decode();
+  const uint32_t alphaPoint[] = {AP_PURPLE, AP_RED, AP_BLUE};
+  const uint32_t deltaBurst[] = {DB_PURPLE, DB_RED, AP_BLUE};
 
-  return myDecoder.protocolNum == UNKNOWN &&
-         (myDecoder.value == alphaPoint[ownerTeam] ||
-          myDecoder.value == deltaBurst[ownerTeam]);
+  return myDecoder.protocolNum == UNKNOWN && 
+    (myDecoder.value == alphaPoint[teamEnemy] ||
+    myDecoder.value == deltaBurst[teamEnemy]) &&
+    hitPoint > 0;
 }
 
 void validHitResponse() {
   --hitPoint;
-
   Serial.print(F("VALID HIT "));
-  Serial.print(teamName[ownerTeam]);
+  Serial.print(teamName[teamEnemy]);
   Serial.print(F(" 0x"));
   Serial.println(myDecoder.value, HEX);
-
-  setLEDColor(teamColor[ownerTeam], 0);
-  delay(HOLD_DELAY_VALID_HIT);
-  setLEDNone();
+  clearLED();
+  setLED(teamColor[teamEnemy], 0);
+  delay(240);
+  showHitPoint();
 }
 
-// Cycle ownerTeam variable between teams and show a boot-up animation to indicate ownerTeam color when Right Button is pressed.
+// Cycle teamOwner variable between teams and show a boot-up animation to indicate teamOwner color when Right Button is pressed.
 void teamSwitchButton() {
-  setLEDNone();
-  if (++ownerTeam > 2) {
-    ownerTeam = 0;
+  hitPoint = HIT_POINT_BASE * HIT_POINT_MULTIPLIER;
+  if (++teamOwner > 2) {
+    teamOwner = 0;
   }
-  setLEDColor(teamColor[ownerTeam], ANIMATION_DELAY_TEAM_SWITCH);
-  delay(HOLD_DELAY_TEAM_SWITCH);
-  hitPointLEDGreen();
+  if (--teamEnemy < 0) {
+    teamEnemy = 2;
+  }
+  clearLED();
+  setLED(teamColor[teamOwner], 100);
+  showHitPoint();
 }
 
-// Reset the unit to full health on current ownerTeam when Left Button is pressed.
-void resetButton() {
-  hitPoint = HIT_POINT_MAX;
-  setLEDNone();
-  setLEDColor(teamColor[ownerTeam], ANIMATION_DELAY_RESET);
-  hitPointLEDGreen();
+// Cycle between 10/20/30 Hit Points.
+void modeButton() {
+  if (++HIT_POINT_MULTIPLIER < 3) {
+    HIT_POINT_MULTIPLIER = 1;
+  }
 }
 
-// set all NeoPixels to the given color
-void setLEDColor(uint32_t color, int animation_delay)
-{
-  uint8_t r = (color >> 16) & 0xFF;
-  uint8_t g = (color >> 8) & 0xFF;
-  uint8_t b = color & 0xFF;
+//Show HP on Neopixel LED
+void showHitPoint() {
+  clearLED();
+  for (int i=0; i<hitPoint; i++) {
+    strip.setPixelColor(i, 0x00, 0x0A, 0x00);
+  }
+  strip.show();
+}
 
-  for (int i=0; i<strip.numPixels(); i++) {
+//Set all Neopixel LED, with optional animation delay.
+void setLED (uint32_t color, int animation_delay) {
+  uint8_t r = (color >> 16) & 0x0A;
+  uint8_t g = (color >> 8) & 0x0A;
+  uint8_t b = color & 0x0A;
+  for (int i=0; i<hitPoint; i++) { 
     strip.setPixelColor(i, r, g, b);
     strip.show();
     delay(animation_delay);
   }
 }
 
-void showHitPointLED(int hp) {
-  setLEDNone();
-  if (hp > 0) {
-      for (int i=0; i<hp; i++) {
-        strip.setPixelColor(i, 0x00, 0xFF, 0x00);
-        strip.show();
-        delay(ANIMATION_DELAY_HIT_POINT);
-      }
-  } else {
-    for (int i=0; i<strip.numPixels(); i++) {
-      strip.setPixelColor(i, 0xFF, 0xFF, 0xFF);
-      strip.show();
-      delay(ANIMATION_DELAY_NO_HIT_POINT);
-    }
-    setLEDNone();
-  }
-}
-
-void setLEDNone() {
+//Clears all LEDs.
+void clearLED() {
   strip.clear();
   strip.show();
+}
+
+//Loops when HP is 0, and you can hold the teamSwitchButton to reset HP and escape the loop.
+void dead() {
+  clearLED();
+  for (int i=0; i<strip.numPixels(); i++) {
+    strip.setPixelColor(i, 0x0A, 0x0A, 0x00);
+    if (CircuitPlayground.rightButton()) {
+      teamSwitchButton();
+      return;
+    }
+    strip.show();
+    delay(100);
+  }
 }
 
 void setup() {
@@ -128,33 +129,34 @@ void setup() {
   myReceiver.enableIRIn(); // Start the receiver
   Serial.println(F("Ready to receive IR signals"));
   strip.begin();
-  strip.setBrightness(42);
-  strip.clear();
-  strip.show();
-  setLEDColor(PURPLE, ANIMATION_DELAY_SETUP);
-  setLEDColor(GREEN, ANIMATION_DELAY_SETUP);
+  clearLED();
+  setLED(teamColor[teamOwner], 100);
+  showHitPoint();
 }
 
 void loop() {
-    // Activate IR Receiver
+  //Loop death animation while HP is 0
+  if (hitPoint <= 0) {
+    dead();
+  }
+
+  //Initialize IR Receiver once it gets a signal and reset IR Receiver.
   if (myReceiver.getResults()) {
-    myDecoder.decode();
-    if (validHit()) {
+    if (validHit() == true) {
       validHitResponse();
-      showHitPointLED(hitPoint);
     }
     else {
       Serial.print(F("INVALID HIT 0x"));
       Serial.println(myDecoder.value, HEX);
     }
+    myReceiver.enableIRIn();
   }
-  myReceiver.enableIRIn();
 
   if (CircuitPlayground.rightButton()) {
     teamSwitchButton();
   }
 
   if (CircuitPlayground.leftButton()) {
-    resetButton();
+    modeButton();
   }
 }
