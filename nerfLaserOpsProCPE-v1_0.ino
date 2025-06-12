@@ -88,7 +88,7 @@ void modeButton() {
   showHitPoint();
 }
 
-//Show HP on Neopixel LED
+//Show hit points on Neopixel LED
 void showHitPoint() {
   CircuitPlayground.clearPixels();
   strip.fill(GREEN, 0, hitPoint);
@@ -114,15 +114,9 @@ void setLED (uint32_t color, int animation_delay) {
   }
 }
 
-//Loops when hitPoints is 0; you can hold the teamSwitchButton/modeButton to reset HP and escape the loop.
-void dead() {
-  setLED(YELLOW, 420);
-}
-
 void setup() {
   CircuitPlayground.begin();
   Serial.begin(9600);
-//  while (!Serial); //delay to wait for serial port
   myReceiver.enableIRIn(); // Start the receiver
   Serial.println(F("Ready to receive IR signals"));
   strip.setBrightness(12);
@@ -132,12 +126,11 @@ void setup() {
 }
 
 void loop() {
-  //Loop death animation while HP is 0
+  //Loop death animation when hitPoints is 0; you can hold the teamSwitchButton/modeButton to reset HP and escape the loop.
   if (hitPoint <= 0) {
-    dead();
+    setLED(YELLOW, 420);
   }
 
-  //Initialize IR Receiver once it gets a signal and reset IR Receiver. 
   if (myReceiver.getResults()) {
     if (validHit() == true) {
       validHitResponse();
