@@ -1,6 +1,6 @@
 # nerfLaserOpsProCPE
 
-Arduino code for Adafruit Circuit Playground Express to expand Nerf Laser Ops Pro/Classic blaster gameplay without modifying the blasters.
+Arduino code for Adafruit Circuit Playground Express to expand Nerf Laser Ops Pro/Classic blaster Out-of-Box gameplay without modifying the blasters.
 
 This code is for a base or single target with hit points for players to destroy during games, which encourages peeking out from cover.
 
